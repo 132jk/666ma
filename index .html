@@ -1,1 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>群友骰子王</title>
+  <style>
+    * {
+      user-select: none;
+    }
+    body {
+      font-family: "微软雅黑", "Segoe UI", sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+      background: linear-gradient(145deg, #2c3e50 0%, #1a2632 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    h1 {
+      color: #f5c542;
+      text-shadow: 2px 2px 0 #7d5d1a;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+    }
+    .dice-container {
+      width: 180px;
+      height: 180px;
+      margin: 20px auto;
+      perspective: 800px;
+      cursor: pointer;
+    }
+    .dice {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      border-radius: 16px;
+    }
+    .dice-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: white;
+      border-radius: 16px;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.3);
+      backface-visibility: visible;
+    }
+    /* 六个面的位置（边长一半 = 90px）*/
+    .front  { transform: translateZ(90px); background: #fff5e6; }
+    .back   { transform: rotateY(180deg) translateZ(90px); background: #fff5e6; }
+    .right  { transform: rotateY(90deg) translateZ(90px); background: #fff5e6; }
+    .left   { transform: rotateY(-90deg) translateZ(90px); background: #fff5e6; }
+    .top    { transform: rotateX(90deg) translateZ(90px); background: #fff5e6; }
+    .bottom { transform: rotateX(-90deg) translateZ(90px); background: #fff5e6; }
 
+    /* 点状网格系统 */
+    .dice-dots {
+      width: 80%;
+      height: 80%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #1e1e2a;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+    }
+    /* 特殊布局：中心点 */
+    .center-dot {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+    /* 1点 */
+    .face-1 .dice-dots { justify-content: center; align-items: center; }
+    /* 6点 两列三行 */
+    .grid-6 {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+    }
+    .grid-6 .col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+    /* 4点 四角 */
+    .grid-4 {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-content: space-between;
+      height: 100%;
+    }
+    .grid-4 .dot {
+      width: 28px;
+      height: 28px;
+    }
+    /* 5点 = 四角 + 中心 */
+    .face-5 .dice-dots {
+      position: relative;
+    }
+    .five-layout {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+    .five-layout .row {
+      justify-content: space-between;
+    }
+    .five-layout .center-row {
+      justify-content: center;
+    }
+    /* 2点 对角线 */
+    .two-diagonal {
+      display: flex;
+      justify-content: space-between;
+      height: 100%;
+      flex-direction: column;
+    }
+    .two-diagonal .top-right {
+      align-self: flex-end;
+    }
+    .two-diagonal .bottom-left {
+      align-self: flex-start;
+    }
+    /* 3点 斜线 */
+    .three-diag {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+    .three-diag .row {
+      justify-content: space-between;
+    }
+    .three-diag .mid-row {
+      justify-content: center;
+    }
+
+    button {
+      padding: 12px 28px;
+      font-size: 20px;
+      font-weight: bold;
+      background: #f5c542;
+      color: #2c3e50;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      margin: 15px;
+      transition: 0.2s;
+      box-shadow: 0 4px 0 #7d5d1a;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      background: #ffd966;
+      box-shadow: 0 6px 0 #7d5d1a;
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #7d5d1a;
+    }
+    button:disabled {
+      opacity: 0.6;
+      transform: none;
+      cursor: not-allowed;
+    }
+    .history {
+      margin-top: 30px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 20px;
+      padding: 15px;
+      backdrop-filter: blur(4px);
+    }
+    .history h3 {
+      color: #ffd966;
+      margin: 0 0 10px 0;
+    }
+    .history ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .history li {
+      padding: 8px 12px;
+      border-bottom: 1px solid #3a4a5a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #f0f0f0;
+      font-size: 14px;
+    }
+    .copy-btn {
+      background: #2c7da0;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .copy-btn:hover {
+      background: #1f5e7a;
+    }
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e2a32;
+      color: #ffd966;
+      padding: 8px 20px;
+      border-radius: 40px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      font-weight: bold;
+      box-shadow: 0 2px 8px black;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    @media (max-width: 500px) {
+      .dice-container { width: 140px; height: 140px; }
+      .front  { transform: translateZ(70px); }
+      .back   { transform: rotateY(180deg) translateZ(70px); }
+      .right  { transform: rotateY(90deg) translateZ(70px); }
+      .left   { transform: rotateY(-90deg) translateZ(70px); }
+      .top    { transform: rotateX(90deg) translateZ(70px); }
+      .bottom { transform: rotateX(-90deg) translateZ(70px); }
+      .dot { width: 18px; height: 18px; }
+    }
+  </style>
+</head>
+<body>
+<h1>🎲 群友骰子王 🎲</h1>
+<div class="dice-container">
+  <div class="dice" id="dice">
+    <!-- 1点 (前面) -->
+    <div class="dice-face front face-1">
+      <div class="dice-dots"><div class="dot"></div></div>
+    </div>
+    <!-- 2点 (上面) 对角线 -->
+    <div class="dice-face top face-2">
+      <div class="dice-dots two-diagonal">
+        <div class="dot" style="align-self: flex-end;"></div>
+        <div class="dot" style="align-self: flex-start;"></div>
+      </div>
+    </div>
+    <!-- 3点 (右面) 斜线 -->
+    <div class="dice-face right face-3">
+      <div class="dice-dots three-diag">
+        <div class="row"><div class="dot"></div></div>
+        <div class="row mid-row"><div class="dot"></div></div>
+        <div class="row"><div class="dot" style="align-self: flex-end;"></div></div>
+      </div>
+    </div>
+    <!-- 4点 (左面) 四角 -->
+    <div class="dice-face left face-4">
+      <div class="dice-dots grid-4">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <!-- 5点 (下面) 四角+中心 -->
+    <div class="dice-face bottom face-5">
+      <div class="dice-dots five-layout">
+        <div class="row"><div class="dot"></div><div class="dot"></div></div>
+        <div class="row center-row"><div class="dot"></div></div>
+        <div class="row"><div class="dot"></div><div class="dot"></div></div>
+      </div>
+    </div>
+    <!-- 6点 (后面) 两列三行 -->
+    <div class="dice-face back face-6">
+      <div class="dice-dots grid-6">
+        <div class="col"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="col"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<button id="rollBtn">🎲 摇骰子 🎲</button>
+
+<div class="history">
+  <h3>📜 历史记录</h3>
+  <ul id="historyList"></ul>
+</div>
+<div class="toast" id="toast">✓ 已复制到剪贴板</div>
+
+<script>
+  const dice = document.getElementById('dice');
+  const rollBtn = document.getElementById('rollBtn');
+  const historyList = document.getElementById('historyList');
+  const toast = document.getElementById('toast');
+  
+  let history = [];
+  let isRolling = false;
+
+  // 预设旋转：根据点数使指定数字面朝前
+  // 标准：前面=1，上面=2，右面=3，左面=4，下面=5，后面=6
+  const rotations = {
+    1: { x: 0, y: 0 },       // 前面朝前
+    2: { x: -90, y: 0 },     // 上面翻到前面
+    3: { x: 0, y: 90 },      // 右面转到前面
+    4: { x: 0, y: -90 },     // 左面转到前面
+    5: { x: 90, y: 0 },      // 下面转到前面
+    6: { x: 0, y: 180 }      // 后面转到前面
+  };
+
+  // 显示提示
+  function showToast(msg = '✓ 已复制到剪贴板') {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+  }
+
+  // 复制文本
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('✓ 复制成功');
+    } catch (err) {
+      // 降级方案
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast('✓ 复制成功');
+    }
+  }
+
+  // 更新历史UI
+  function updateHistoryUI() {
+    historyList.innerHTML = '';
+    history.forEach((item, idx) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${item.text}</span>`;
+      const copyBtn = document.createElement('button');
+      copyBtn.textContent = '复制';
+      copyBtn.className = 'copy-btn';
+      copyBtn.onclick = (e) => {
+        e.stopPropagation();
+        copyToClipboard(`🎲 我摇出了 ${item.result} 点！`);
+      };
+      li.appendChild(copyBtn);
+      historyList.appendChild(li);
+    });
+  }
+
+  // 添加记录
+  function addHistory(result) {
+    const time = new Date().toLocaleTimeString();
+    const recordText = `[${time}] 摇出 ${result} 点`;
+    history.unshift({ result, time, text: recordText });
+    if (history.length > 10) history.pop();
+    updateHistoryUI();
+  }
+
+  // 摇骰子动画
+  function rollDice() {
+    if (isRolling) return;
+    isRolling = true;
+    rollBtn.disabled = true;
+
+    // 随机生成点数 1~6
+    const targetNumber = Math.floor(Math.random() * 6) + 1;
+    
+    // 先随机旋转多圈（增加动感）
+    const extraX = Math.floor(Math.random() * 4) * 360;
+    const extraY = Math.floor(Math.random() * 4) * 360;
+    const randomRot = `rotateX(${extraX}deg) rotateY(${extraY}deg)`;
+    dice.style.transform = randomRot;
+    
+    // 延迟后精准转到目标点数对应的面
+    setTimeout(() => {
+      const final = rotations[targetNumber];
+      dice.style.transform = `rotateX(${final.x}deg) rotateY(${final.y}deg)`;
+      
+      // 添加历史记录
+      addHistory(targetNumber);
+      
+      isRolling = false;
+      rollBtn.disabled = false;
+    }, 500);
+  }
+
+  // 绑定事件
+  rollBtn.addEventListener('click', rollDice);
+  
+  // 初始化让骰子显示1点正面
+  dice.style.transform = `rotateX(0deg) rotateY(0deg)`;
+  
+  // 可选：点击骰子也可以摇
+  dice.addEventListener('click', rollDice);
+</script>
+</body>
+</html>
